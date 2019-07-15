@@ -3,14 +3,13 @@ package pasa.cbentley.testing;
 import java.io.PrintStream;
 import java.util.StringTokenizer;
 
-import junit.framework.AssertionFailedError;
-import junit.framework.TestCase;
-import junit.framework.TestResult;
-
 import org.junit.rules.TestRule;
 import org.junit.rules.TestWatcher;
 import org.junit.runner.Description;
 
+import junit.framework.AssertionFailedError;
+import junit.framework.TestCase;
+import junit.framework.TestResult;
 import pasa.cbentley.core.src4.ctx.UCtx;
 import pasa.cbentley.core.src4.helpers.StringBBuilder;
 import pasa.cbentley.core.src4.logging.Dctx;
@@ -69,6 +68,8 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
 
    private boolean             isPrintNotYetDone;
 
+   private Integer lock = new Integer(0);
+
    /**
     * 
     */
@@ -90,6 +91,8 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
    private PrintStream         standardOut;
 
    protected int               testFlags        = 0;
+
+   private AssertionFailedError threadFailure;
 
    protected UCtx              uc;
 
@@ -158,29 +161,15 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       }
    }
 
-   public void logPrint(int num, String... str) {
-      StringBBuilder sb = new StringBBuilder();
-      sb.append(num);
-      for (int i = 0; i < str.length; i++) {
-         sb.tab();
-         sb.append(str[i]);
-      }
-      toDLog().pTest(sb.toString(), null, getClass(), "logPrint");
-   }
-
-   public void logPrint(IStringable o) {
-      toDLog().pTest("", o, getClass(), "logPrint");
-   }
-
-   public void logPrint(String str) {
-      toDLog().pTest(str, null, getClass(), "logPrint");
-   }
-
    public void assertEqualsIntArray(int[] d, int[] e) {
       assertEquals(d.length, d.length);
       for (int i = 0; i < e.length; i++) {
          assertEquals((d[i]), e[i]);
       }
+   }
+
+   public void assertNotReachable(String message) {
+      assertFalse(message, true);
    }
 
    public void assertStringLineByLine(String str1, String str2) {
@@ -234,10 +223,6 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       return uc.toDLog();
    }
 
-   public void assertNotReachable(String message) {
-      assertFalse(message, true);
-   }
-
    /**
     * Print the accumulated log buffer to the standard output.
     * <br>
@@ -284,6 +269,56 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
 
    }
 
+   public void lockRelease(String message) {
+      synchronized (lock) {
+         //#debug
+         toDLog().pTest(message, null, BentleyTestCase.class, "lockRelease", ITechLvl.LVL_04_FINER, true);
+         lock.notifyAll();
+      }
+   }
+
+   public void lockWait(long millis, String message) {
+      synchronized (lock) {
+         //check if we have an assertion
+         if (threadFailure != null) {
+            throw threadFailure;
+         }
+         try {
+            //#debug
+            toDLog().pTest(message, null, BentleyTestCase.class, "lockWait", ITechLvl.LVL_04_FINER, true);
+            lock.wait(millis);
+         } catch (InterruptedException e) {
+            e.printStackTrace();
+         }
+
+         if (threadFailure != null) {
+            throw threadFailure;
+         }
+      }
+   }
+
+   public void logPrint(int num, String... str) {
+      StringBBuilder sb = new StringBBuilder();
+      sb.append(num);
+      for (int i = 0; i < str.length; i++) {
+         sb.tab();
+         sb.append(str[i]);
+      }
+      toDLog().pTest(sb.toString(), null, getClass(), "logPrint");
+   }
+
+   public void logPrint(IStringable o) {
+      toDLog().pTest("", o, getClass(), "logPrint");
+   }
+
+   public void logPrint(String str) {
+      toDLog().pTest(str, null, getClass(), "logPrint");
+   }
+
+   public void printTest(String msg) {
+      logPrint(msg);
+   }
+
    /**
     * TODO find a way to get JUNIt method name. not easy.
     */
@@ -324,6 +359,10 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       tearDownNoError();
    }
 
+   public void setEnableThreadName(boolean b) {
+      dlog().getDefault().getConfig().setFlagFormat(ITechConfig.CONFIG_FLAG_04_SHOW_THREAD, b);
+   }
+
    public void setTestFlag(int flag, boolean v) {
       testFlags = BitUtils.setFlag(testFlags, flag, v);
    }
@@ -346,7 +385,7 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       //         lpsOut.resetBuf();
       //         isPrintNotYetDone = true;
       //      }
-      setUpMord();
+      setupAbstract();
    }
 
    /**
@@ -355,12 +394,16 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
     * <br>
     * Replaces the set up method.
     */
-   public abstract void setUpMord();
+   public abstract void setupAbstract();
 
-   public void printTest(String msg) {
-      logPrint(msg);
+   public void sleep(long millis) {
+      try {
+         Thread.sleep(millis);
+      } catch (InterruptedException e) {
+         e.printStackTrace();
+      }
    }
-   
+
    /**
     * 
     */
@@ -393,80 +436,6 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       }
    }
 
-   private Integer lock = new Integer(0);
-
-   /**
-    * 
-    */
-   public void waitLock() {
-      synchronized (lock) {
-         try {
-            lock.wait();
-         } catch (InterruptedException e) {
-            e.printStackTrace();
-         }
-      }
-   }
-
-   public void lockWait(long millis, String message) {
-      synchronized (lock) {
-         //check if we have an assertion
-         if (threadFailure != null) {
-            throw threadFailure;
-         }
-         try {
-            //#debug
-            toDLog().pTest(message, null, BentleyTestCase.class, "lockWait", ITechLvl.LVL_04_FINER, true);
-            lock.wait(millis);
-         } catch (InterruptedException e) {
-            e.printStackTrace();
-         }
-
-         if (threadFailure != null) {
-            throw threadFailure;
-         }
-      }
-   }
-
-   public void lockRelease(String message) {
-      synchronized (lock) {
-         //#debug
-         toDLog().pTest(message, null, BentleyTestCase.class, "lockRelease", ITechLvl.LVL_04_FINER, true);
-         lock.notifyAll();
-      }
-   }
-
-   public void sleep(long millis) {
-      try {
-         Thread.sleep(millis);
-      } catch (InterruptedException e) {
-         e.printStackTrace();
-      }
-   }
-
-   /**
-    * Test equality in a thread that is not the JUnit thread.
-    * It assertion fails, 
-    * @param ex
-    * @param d
-    */
-   public void threadAssertEquals(int ex, int d) {
-      try {
-         assertEquals(ex, d);
-      } catch (AssertionFailedError e) {
-         //notify waiting thread and throw exception
-         threadFailure = e;
-         lockRelease("Assertion Failure In Thread.");
-         throw threadFailure;
-      }
-   }
-
-   public void setEnableThreadName(boolean b) {
-      dlog().getDefault().getConfig().setFlagFormat(ITechConfig.CONFIG_FLAG_04_SHOW_THREAD, b);
-   }
-
-   private AssertionFailedError threadFailure;
-
    /**
     * 
     */
@@ -497,6 +466,27 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       }
    }
 
+   /**
+    * Test equality in a thread that is not the JUnit thread.
+    * It assertion fails, 
+    * @param ex
+    * @param d
+    */
+   public void threadAssertEquals(int ex, int d) {
+      try {
+         assertEquals(ex, d);
+      } catch (AssertionFailedError e) {
+         //notify waiting thread and throw exception
+         threadFailure = e;
+         lockRelease("Assertion Failure In Thread.");
+         throw threadFailure;
+      }
+   }
+
+   public IDLog toDLog() {
+      return uc.toDLog();
+   }
+
    //#mdebug
    public String toString() {
       return Dctx.toString(this);
@@ -506,20 +496,29 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       dc.root(this, "BentleyTestCase");
    }
 
-   public IDLog toDLog() {
-      return uc.toDLog();
-   }
-
-   public UCtx toStringGetUCtx() {
-      return uc;
-   }
-
    public String toString1Line() {
       return Dctx.toString1Line(this);
    }
 
    public void toString1Line(Dctx dc) {
       dc.root1Line(this, "BentleyTestCase");
+   }
+
+   public UCtx toStringGetUCtx() {
+      return uc;
+   }
+
+   /**
+    * 
+    */
+   public void waitLock() {
+      synchronized (lock) {
+         try {
+            lock.wait();
+         } catch (InterruptedException e) {
+            e.printStackTrace();
+         }
+      }
    }
 
    //#enddebug
