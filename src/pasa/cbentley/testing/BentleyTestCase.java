@@ -64,43 +64,43 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
    /**
     * Provides info about the current state.
     */
-   private TestResult          currentTestResult;
+   private TestResult           currentTestResult;
 
-   private boolean             isPrintNotYetDone;
+   private boolean              isPrintNotYetDone;
 
-   private Integer lock = new Integer(0);
+   private Integer              lock             = new Integer(0);
 
    /**
     * 
     */
-   protected LoggedPrintStream lpsOut;
+   protected LoggedPrintStream  lpsOut;
 
    /**
     * We have a specific Constructor Stream because we want to be able to switch off
     * constructor logging.
     */
-   protected LoggedPrintStream lpsOutCons;
+   protected LoggedPrintStream  lpsOutCons;
 
-   public boolean              printAnyways     = false;
+   public boolean               printAnyways     = false;
 
-   public boolean              printConstructor = true;
+   public boolean               printConstructor = true;
 
    /**
     * Initiliazed with System.out
     */
-   private PrintStream         standardOut;
+   private PrintStream          standardOut;
 
-   protected int               testFlags        = 0;
+   protected int                testFlags        = 0;
 
    private AssertionFailedError threadFailure;
 
-   protected UCtx              uc;
+   protected UCtx               uc;
 
-   public TestRule             watcher          = new TestWatcher() {
-                                                   protected void starting(Description description) {
-                                                      System.out.println("Starting test: " + description.getMethodName());
-                                                   }
-                                                };
+   public TestRule              watcher          = new TestWatcher() {
+                                                    protected void starting(Description description) {
+                                                       System.out.println("Starting test: " + description.getMethodName());
+                                                    }
+                                                 };
 
    /**
     * By default, logs are shown for failures only.
@@ -132,6 +132,16 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
          standardOut = System.out;
       }
       uc = new UCtx();
+   }
+
+   public void assertEquals(boolean b, Boolean val) {
+      assertNotNull(val);
+      assertEquals(b, val.booleanValue());
+   }
+
+   public void assertEquals(int i, Integer integer) {
+      assertNotNull(integer);
+      assertEquals(i, integer.intValue());
    }
 
    /**
