@@ -178,6 +178,9 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       }
    }
 
+   public void assertReachable() {
+   }
+   
    public void assertNotReachable(String message) {
       assertFalse(message, true);
    }
