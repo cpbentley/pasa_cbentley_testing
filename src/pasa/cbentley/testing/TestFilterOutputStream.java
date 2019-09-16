@@ -9,6 +9,7 @@ import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintStream;
 
+import pasa.cbentley.core.src4.ctx.UCtx;
 import pasa.cbentley.core.src4.helpers.StringBBuilder;
 
 /**
@@ -29,13 +30,17 @@ public class TestFilterOutputStream extends FilterOutputStream {
 
    boolean                sendToStdOut = false;
 
+   protected final UCtx   uc;
+
    /**
     * 
+    * @param uc 
     * @param os {@link OutputStream} which will be printed to when sendToStdOut is true
     */
-   public TestFilterOutputStream(OutputStream os) {
+   public TestFilterOutputStream(UCtx uc, OutputStream os) {
       super(os);
-      this.buf = new StringBBuilder(3600);
+      this.uc = uc;
+      this.buf = new StringBBuilder(uc, 3600);
       baos = new ByteArrayOutputStream();
    }
 
@@ -75,7 +80,7 @@ public class TestFilterOutputStream extends FilterOutputStream {
    }
 
    public String getBufferString() {
-      StringBBuilder sb = StringBBuilder.getBig();
+      StringBBuilder sb = new StringBBuilder(uc);
       try {
          byte[] data = baos.toByteArray();
          ByteArrayInputStream bi = new ByteArrayInputStream(data);

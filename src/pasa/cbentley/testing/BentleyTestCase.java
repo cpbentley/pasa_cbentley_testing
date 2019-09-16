@@ -48,8 +48,8 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
 
    public static final int TEST_FLAG_4_DEBUG_METHOD_NAMES = 8;
 
-   public static String debugFlags(int flags) {
-      StringBBuilder sb = StringBBuilder.getBig();
+   public String debugFlags(int flags) {
+      StringBBuilder sb = new StringBBuilder(uc);
       sb.append(BitUtils.hasFlag(flags, TEST_FLAG_1_HIDE_SYSTEM_OUT) ? " Hide Sysout" : "");
       sb.append(BitUtils.hasFlag(flags, TEST_FLAG_2_HIDE_IN_DEBUG) ? " Hide In Debug" : "");
       sb.append(BitUtils.hasFlag(flags, TEST_FLAG_3_PRINT_ANYWAYS) ? " Print Anyways" : "");
@@ -311,7 +311,7 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
    }
 
    public void logPrint(int num, String... str) {
-      StringBBuilder sb = new StringBBuilder();
+      StringBBuilder sb = new StringBBuilder(uc);
       sb.append(num);
       for (int i = 0; i < str.length; i++) {
          sb.tab();
@@ -422,7 +422,7 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
     */
    private void switchToHideSysout() {
       setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, true);
-      lpsOut = LoggedPrintStream.create(standardOut);
+      lpsOut = LoggedPrintStream.create(uc,standardOut);
       System.setOut(lpsOut);
       isPrintNotYetDone = true;
    }

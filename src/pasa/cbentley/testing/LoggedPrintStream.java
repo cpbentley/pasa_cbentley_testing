@@ -5,6 +5,8 @@ import java.io.OutputStream;
 import java.io.PrintStream;
 import java.lang.reflect.Field;
 
+import pasa.cbentley.core.src4.ctx.UCtx;
+
 public class LoggedPrintStream extends PrintStream {
 
    TestFilterOutputStream os;
@@ -19,13 +21,13 @@ public class LoggedPrintStream extends PrintStream {
     * @param toLog Usually System.out
     * @return
     */
-   public static LoggedPrintStream create(final PrintStream toLog) {
+   public static LoggedPrintStream create(UCtx uc, final PrintStream toLog) {
       try {
          Field f = FilterOutputStream.class.getDeclaredField("out");
          f.setAccessible(true);
          OutputStream psout = (OutputStream) f.get(toLog);
          //we filter all calls coming in by the System.out. They are not forwarded
-         TestFilterOutputStream fos = new TestFilterOutputStream(psout);
+         TestFilterOutputStream fos = new TestFilterOutputStream(uc, psout);
          LoggedPrintStream lps = new LoggedPrintStream(fos);
          return lps;
       } catch (Exception e) {
