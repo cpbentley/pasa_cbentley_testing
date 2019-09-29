@@ -1,6 +1,7 @@
 package pasa.cbentley.testing;
 
 import java.io.PrintStream;
+import java.util.Iterator;
 import java.util.StringTokenizer;
 
 import org.junit.rules.TestRule;
@@ -180,9 +181,20 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
 
    public void assertReachable() {
    }
-   
+
    public void assertNotReachable(String message) {
       assertFalse(message, true);
+   }
+
+   public void assertNotReachableThread(String message) {
+      try {
+         assertFalse(message, true);
+      } catch (AssertionFailedError e) {
+         //notify waiting thread and throw exception
+         threadFailure = e;
+         lockRelease("Assertion Failure In Thread.");
+         throw threadFailure;
+      }
    }
 
    public void assertStringLineByLine(String str1, String str2) {
@@ -282,14 +294,29 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
 
    }
 
+   /**
+    * Tells to release the lock if the number of release if enough
+    * @param message
+    */
    public void lockRelease(String message) {
       synchronized (lock) {
-         //#debug
-         toDLog().pTest(message, null, BentleyTestCase.class, "lockRelease", ITechLvl.LVL_04_FINER, true);
-         lock.notifyAll();
+         numLockRelease -= 1;
+         if (numLockRelease <= 0) {
+            //#debug
+            toDLog().pTest(message, null, BentleyTestCase.class, "lockRelease", ITechLvl.LVL_04_FINER, true);
+            lock.notifyAll();
+         }
       }
    }
 
+   /**
+    * Waits for millis until a call to {@link BentleyTestCase#lockRelease(String)}
+    * <br>
+    * throws any assert failure set to {@link BentleyTestCase#threadFailure}
+    * when a thread fails an assert
+    * @param millis
+    * @param message
+    */
    public void lockWait(long millis, String message) {
       synchronized (lock) {
          //check if we have an assertion
@@ -308,6 +335,12 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
             throw threadFailure;
          }
       }
+   }
+
+   private int numLockRelease;
+
+   protected void setNunLockReleased(int num) {
+      numLockRelease = num;
    }
 
    public void logPrint(int num, String... str) {
@@ -353,6 +386,12 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
 
    }
 
+   public void execute(Runnable ... runs) {
+      for(Runnable run: runs) {
+         new Thread(run).start();
+      }
+   }
+   
    /**
     * Overriden in case you may want to use tearDownNoError
     */
@@ -422,7 +461,7 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
     */
    private void switchToHideSysout() {
       setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, true);
-      lpsOut = LoggedPrintStream.create(uc,standardOut);
+      lpsOut = LoggedPrintStream.create(uc, standardOut);
       System.setOut(lpsOut);
       isPrintNotYetDone = true;
    }
@@ -476,6 +515,17 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
    private void tearDownNoError() {
       if (hasTestFlag(BentleyTestCase.TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
          System.out.println("#MordTestCase#tearDownNoError");
+      }
+   }
+
+   public void assertNotNullThread(Object o) {
+      try {
+         assertNotNull(o);
+      } catch (AssertionFailedError e) {
+         //notify waiting thread and throw exception
+         threadFailure = e;
+         lockRelease("Assertion Failure In Thread.");
+         throw threadFailure;
       }
    }
 
