@@ -1,7 +1,6 @@
-package pasa.cbentley.testing;
+package pasa.cbentley.testing.engine;
 
 import java.io.PrintStream;
-import java.util.Iterator;
 import java.util.StringTokenizer;
 
 import org.junit.rules.TestRule;
@@ -19,6 +18,7 @@ import pasa.cbentley.core.src4.logging.IStringable;
 import pasa.cbentley.core.src4.logging.ITechConfig;
 import pasa.cbentley.core.src4.logging.ITechLvl;
 import pasa.cbentley.core.src4.utils.BitUtils;
+import pasa.cbentley.testing.ctx.TestCtx;
 
 /**
  * Super class where one can configure the System.out calls
@@ -30,33 +30,7 @@ import pasa.cbentley.core.src4.utils.BitUtils;
  * @author Charles Bentley
  *
  */
-public abstract class BentleyTestCase extends TestCase implements IStringable {
-
-   /**
-    * Hides all the system out of test method, even construction
-    */
-   public static final int TEST_FLAG_1_HIDE_SYSTEM_OUT    = 1;
-
-   /**
-    * When set to true, hides the Sysout in debug mode in all cases.
-    */
-   public static final int TEST_FLAG_2_HIDE_IN_DEBUG      = 2;
-
-   /**
-    * 
-    */
-   public static final int TEST_FLAG_3_PRINT_ANYWAYS      = 4;
-
-   public static final int TEST_FLAG_4_DEBUG_METHOD_NAMES = 8;
-
-   public String debugFlags(int flags) {
-      StringBBuilder sb = new StringBBuilder(uc);
-      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_1_HIDE_SYSTEM_OUT) ? " Hide Sysout" : "");
-      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_2_HIDE_IN_DEBUG) ? " Hide In Debug" : "");
-      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_3_PRINT_ANYWAYS) ? " Print Anyways" : "");
-      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_4_DEBUG_METHOD_NAMES) ? " Show Method Names" : "");
-      return sb.toString();
-   }
+public abstract class TestCaseBentley extends TestCase implements IStringable, ITechTesting {
 
    public static String debugResult(TestResult tr) {
       return tr.wasSuccessful() + " Errors=" + tr.errorCount() + " Failures=" + tr.failureCount() + " Run=" + tr.runCount();
@@ -82,6 +56,8 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
     */
    protected LoggedPrintStream  lpsOutCons;
 
+   private int                  numLockRelease;
+
    public boolean               printAnyways     = false;
 
    public boolean               printConstructor = true;
@@ -91,22 +67,16 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
     */
    private PrintStream          standardOut;
 
-   protected int                testFlags        = 0;
-
    private AssertionFailedError threadFailure;
 
    protected UCtx               uc;
 
-   public TestRule              watcher          = new TestWatcher() {
-                                                    protected void starting(Description description) {
-                                                       System.out.println("Starting test: " + description.getMethodName());
-                                                    }
-                                                 };
+   protected TestCtx            tc;
 
    /**
     * By default, logs are shown for failures only.
     */
-   public BentleyTestCase() {
+   public TestCaseBentley() {
       this(TEST_FLAG_1_HIDE_SYSTEM_OUT);
    }
 
@@ -118,21 +88,33 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
     * it on System.out.
     * 
     */
-   public BentleyTestCase(boolean hide) {
+   public TestCaseBentley(boolean hide) {
       //when you are running into debugging mode, we want to see system out asap
       this(hide ? TEST_FLAG_1_HIDE_SYSTEM_OUT : 0);
    }
 
    /**
+    * Create a default {@link TestCtx} with default hard coded flags.
+    * 
+    * In a {@link TestSuiteBentley}, you can create you own {@link TestCtx} that will replace the one
+    * created here.
     * 
     * @param testFlags
     */
-   public BentleyTestCase(int ptestFlags) {
-      this.testFlags = ptestFlags;
+   public TestCaseBentley(int ptestFlags) {
       if (standardOut == null) {
          standardOut = System.out;
       }
       uc = new UCtx();
+      tc = new TestCtx(uc);
+   }
+
+   public void setFlagHideSystemOutTrue() {
+      tc.setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, true);
+   }
+
+   public void setFlagHideSystemOutFalse() {
+      tc.setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, false);
    }
 
    public void assertEquals(boolean b, Boolean val) {
@@ -144,7 +126,10 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       assertNotNull(integer);
       assertEquals(i, integer.intValue());
    }
-
+   public void assertNotSameReference(Object o1, Object o2) {
+      assertEquals(true, o1 != o2);
+   }
+   
    /**
     * This method does null checks
     * @param data
@@ -165,6 +150,10 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       }
    }
 
+   public void setTestCtx(TestCtx tc) {
+      this.tc = tc;
+   }
+
    public void assertEqualsByteArray(byte[] d, byte[] e) {
       assertEquals(d.length, d.length);
       for (int i = 0; i < e.length; i++) {
@@ -179,7 +168,15 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       }
    }
 
-   public void assertReachable() {
+   public void assertNotNullThread(Object o) {
+      try {
+         assertNotNull(o);
+      } catch (AssertionFailedError e) {
+         //notify waiting thread and throw exception
+         threadFailure = e;
+         lockRelease("Assertion Failure In Thread.");
+         throw threadFailure;
+      }
    }
 
    public void assertNotReachable(String message) {
@@ -195,6 +192,9 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
          lockRelease("Assertion Failure In Thread.");
          throw threadFailure;
       }
+   }
+
+   public void assertReachable() {
    }
 
    public void assertStringLineByLine(String str1, String str2) {
@@ -231,22 +231,20 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
    private void beforeRunTestResult() {
       boolean isDebug = isRunningDebug();
       if (isDebug && !hasTestFlag(TEST_FLAG_2_HIDE_IN_DEBUG)) {
-         testFlags = BitUtils.setFlag(testFlags, TEST_FLAG_1_HIDE_SYSTEM_OUT, false);
+         setFlagHideSystemOutFalse();
       }
-      if (BitUtils.hasFlag(testFlags, TEST_FLAG_1_HIDE_SYSTEM_OUT)) {
+      if (tc.hasTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT)) {
          switchToHideSysout();
       } else {
          switchToShowSysout();
       }
       isPrintNotYetDone = true;
-      if (hasTestFlag(BentleyTestCase.TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
-         System.out.println("#MordTestCase#Constructor " + debugFlags(testFlags));
+      
+      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
+         System.out.println("#MordTestCase#Constructor " + tc.debugFlags());
       }
    }
 
-   protected IDLog dlog() {
-      return uc.toDLog();
-   }
 
    /**
     * Print the accumulated log buffer to the standard output.
@@ -270,8 +268,18 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       }
    }
 
+   public void execute(Runnable... runs) {
+      for (Runnable run : runs) {
+         new Thread(run).start();
+      }
+   }
+
+   public UCtx getUC() {
+      return uc;
+   }
+
    public boolean hasTestFlag(int flag) {
-      return BitUtils.hasFlag(testFlags, flag);
+      return tc.hasTestFlag(flag);
    }
 
    public boolean isEquals(byte[] d1, byte[] d2) {
@@ -303,16 +311,16 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
          numLockRelease -= 1;
          if (numLockRelease <= 0) {
             //#debug
-            toDLog().pTest(message, null, BentleyTestCase.class, "lockRelease", ITechLvl.LVL_04_FINER, true);
+            toDLog().pTest(message, null, TestCaseBentley.class, "lockRelease", ITechLvl.LVL_04_FINER, true);
             lock.notifyAll();
          }
       }
    }
 
    /**
-    * Waits for millis until a call to {@link BentleyTestCase#lockRelease(String)}
+    * Waits for millis until a call to {@link TestCaseBentley#lockRelease(String)}
     * <br>
-    * throws any assert failure set to {@link BentleyTestCase#threadFailure}
+    * throws any assert failure set to {@link TestCaseBentley#threadFailure}
     * when a thread fails an assert
     * @param millis
     * @param message
@@ -325,7 +333,7 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
          }
          try {
             //#debug
-            toDLog().pTest(message, null, BentleyTestCase.class, "lockWait", ITechLvl.LVL_04_FINER, true);
+            toDLog().pTest(message, null, TestCaseBentley.class, "lockWait", ITechLvl.LVL_04_FINER, true);
             lock.wait(millis);
          } catch (InterruptedException e) {
             e.printStackTrace();
@@ -337,12 +345,11 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       }
    }
 
-   private int numLockRelease;
-
-   protected void setNunLockReleased(int num) {
-      numLockRelease = num;
-   }
-
+   /**
+    * Logs the strings along with their id num. 
+    * @param num used to differentiate from competing threads log statements
+    * @param str
+    */
    public void logPrint(int num, String... str) {
       StringBBuilder sb = new StringBBuilder(uc);
       sb.append(num);
@@ -361,18 +368,14 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
       toDLog().pTest(str, null, getClass(), "logPrint");
    }
 
-   public void printTest(String msg) {
-      logPrint(msg);
-   }
-
    /**
-    * TODO find a way to get JUNIt method name. not easy.
+    * TODO find a way to get Junit method name. not easy.
     */
    public void run(TestResult tr) {
       //very first set up
       beforeRunTestResult();
 
-      if (hasTestFlag(BentleyTestCase.TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
+      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
          System.out.println("#MordTestCase#runTestResult " + debugResult(tr));
       }
       if (lpsOut != null) {
@@ -386,17 +389,11 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
 
    }
 
-   public void execute(Runnable ... runs) {
-      for(Runnable run: runs) {
-         new Thread(run).start();
-      }
-   }
-   
    /**
     * Overriden in case you may want to use tearDownNoError
     */
    public void runBare() throws Throwable {
-      if (hasTestFlag(BentleyTestCase.TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
+      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
          System.out.println("#MordTestCase#runBare");
       }
 
@@ -412,11 +409,15 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
    }
 
    public void setEnableThreadName(boolean b) {
-      dlog().getDefault().getConfig().setFlagFormat(ITechConfig.CONFIG_FLAG_04_SHOW_THREAD, b);
+      toDLog().getDefault().getConfig().setFlagFormat(ITechConfig.CONFIG_FLAG_04_SHOW_THREAD, b);
+   }
+
+   protected void setNunLockReleased(int num) {
+      numLockRelease = num;
    }
 
    public void setTestFlag(int flag, boolean v) {
-      testFlags = BitUtils.setFlag(testFlags, flag, v);
+      tc.setTestFlag(flag, v);
    }
 
    /**
@@ -425,6 +426,8 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
     * Creates a {@link LoggedPrintStream} from the settings of the test method.
     * <br>
     * Resets the print flag
+    * 
+    * Create a default {@link TestCtx} if none was set externally with {@link TestCaseBentley#setTestCtx(TestCtx)}
     */
    public void setUp() {
       threadFailure = null;
@@ -492,7 +495,7 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
     * 
     */
    public void tearDown() {
-      if (hasTestFlag(BentleyTestCase.TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
+      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
          System.out.println("#MordTestCase#tearDown");
       }
       if (currentTestResult != null) {
@@ -503,7 +506,7 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
    }
 
    private void tearDownError() {
-      if (hasTestFlag(BentleyTestCase.TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
+      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
          System.out.println("#MordTestCase#tearDownError");
       }
       doThePrint();
@@ -513,19 +516,8 @@ public abstract class BentleyTestCase extends TestCase implements IStringable {
     * Not Used anymore
     */
    private void tearDownNoError() {
-      if (hasTestFlag(BentleyTestCase.TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
+      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
          System.out.println("#MordTestCase#tearDownNoError");
-      }
-   }
-
-   public void assertNotNullThread(Object o) {
-      try {
-         assertNotNull(o);
-      } catch (AssertionFailedError e) {
-         //notify waiting thread and throw exception
-         threadFailure = e;
-         lockRelease("Assertion Failure In Thread.");
-         throw threadFailure;
       }
    }
 

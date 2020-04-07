@@ -1,4 +1,4 @@
-package pasa.cbentley.testing;
+package pasa.cbentley.testing.engine;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayInputStream;
