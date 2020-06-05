@@ -13,6 +13,8 @@ import pasa.cbentley.testing.engine.TestCaseBentley;
  * 
  * {@link ITechTesting}
  * 
+ * Provides the basis for the tests
+ * 
  * @author Charles Bentley
  *
  */
@@ -34,6 +36,10 @@ public class TestCtx extends ACtx implements ITechTesting {
 
    public boolean hasTestFlag(int flag) {
       return BitUtils.hasFlag(testFlags, flag);
+   }
+
+   public int getCtxID() {
+      return 21;
    }
 
    public String debugFlags() {

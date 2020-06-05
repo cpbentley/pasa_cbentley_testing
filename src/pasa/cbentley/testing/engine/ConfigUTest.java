@@ -1,11 +1,12 @@
 package pasa.cbentley.testing.engine;
 
+import pasa.cbentley.core.src4.ctx.ConfigUSettable;
 import pasa.cbentley.core.src4.ctx.IConfigU;
 import pasa.cbentley.core.src4.ctx.UCtx;
 import pasa.cbentley.core.src4.logging.Dctx;
 import pasa.cbentley.core.src4.logging.IDLog;
 
-public class ConfigUTest implements IConfigU {
+public class ConfigUTest extends ConfigUSettable implements IConfigU {
 
    //#debug
    private UCtx uc;
@@ -63,6 +64,14 @@ public class ConfigUTest implements IConfigU {
 
    public UCtx toStringGetUCtx() {
       return uc;
+   }
+
+   public boolean isForceExceptions() {
+      return false;
+   }
+
+   public boolean toStringIsUsingClassLinks() {
+      return false;
    }
 
    //#enddebug

@@ -3,21 +3,22 @@ package pasa.cbentley.testing.engine;
 import java.io.PrintStream;
 import java.util.StringTokenizer;
 
-import org.junit.rules.TestRule;
-import org.junit.rules.TestWatcher;
-import org.junit.runner.Description;
-
 import junit.framework.AssertionFailedError;
 import junit.framework.TestCase;
 import junit.framework.TestResult;
+import pasa.cbentley.core.src4.ctx.IConfigU;
 import pasa.cbentley.core.src4.ctx.UCtx;
 import pasa.cbentley.core.src4.helpers.StringBBuilder;
+import pasa.cbentley.core.src4.interfaces.IInputStreamFactory;
 import pasa.cbentley.core.src4.logging.Dctx;
 import pasa.cbentley.core.src4.logging.IDLog;
+import pasa.cbentley.core.src4.logging.IDLogConfig;
+import pasa.cbentley.core.src4.logging.ILogConfigurator;
+import pasa.cbentley.core.src4.logging.ILogEntryAppender;
 import pasa.cbentley.core.src4.logging.IStringable;
 import pasa.cbentley.core.src4.logging.ITechConfig;
 import pasa.cbentley.core.src4.logging.ITechLvl;
-import pasa.cbentley.core.src4.utils.BitUtils;
+import pasa.cbentley.core.src4.utils.ColorUtils;
 import pasa.cbentley.testing.ctx.TestCtx;
 
 /**
@@ -39,39 +40,50 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    /**
     * Provides info about the current state.
     */
-   private TestResult           currentTestResult;
+   private TestResult currentTestResult;
 
-   private boolean              isPrintNotYetDone;
+   private boolean    isPrintNotYetDone;
 
-   private Integer              lock             = new Integer(0);
+   private Integer    lock = new Integer(0);
+
+   public String toStringColor(int c) {
+      return "(" + ((c >> 24) & 0xFF) + "," + ((c >> 16) & 0xFF) + "," + ((c >> 8) & 0xFF) + "," + (c & 0xFF) + ")";
+   }
 
    /**
     * 
     */
-   protected LoggedPrintStream  lpsOut;
+   protected LoggedPrintStream     lpsOut;
 
    /**
     * We have a specific Constructor Stream because we want to be able to switch off
     * constructor logging.
     */
-   protected LoggedPrintStream  lpsOutCons;
+   protected LoggedPrintStream     lpsOutCons;
 
-   private int                  numLockRelease;
+   private int                     numLockRelease;
 
-   public boolean               printAnyways     = false;
+   public boolean                  printAnyways     = false;
 
-   public boolean               printConstructor = true;
+   public boolean                  printConstructor = true;
 
    /**
     * Initiliazed with System.out
     */
-   private PrintStream          standardOut;
+   private PrintStream             standardOut;
 
-   private AssertionFailedError threadFailure;
+   private AssertionFailedError    threadFailure;
 
-   protected UCtx               uc;
+   protected UCtx                  uc;
 
-   protected TestCtx            tc;
+   /**
+    * Cannot be final because it is set externally nu {@link TestCaseBentley#setTestCtx(TestCtx)}
+    */
+   protected TestCtx               tc;
+
+   private InputStreamFactoryJUnit inputStreamFac;
+
+   private boolean isSetup;
 
    /**
     * By default, logs are shown for failures only.
@@ -99,14 +111,42 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
     * In a {@link TestSuiteBentley}, you can create you own {@link TestCtx} that will replace the one
     * created here.
     * 
+    * For sub classes, the right test ctx must be created in a constructor
+    * 
     * @param testFlags
     */
    public TestCaseBentley(int ptestFlags) {
       if (standardOut == null) {
          standardOut = System.out;
       }
-      uc = new UCtx();
-      tc = new TestCtx(uc);
+      IConfigU configu = createConfigU();
+      if (configu == null) {
+         uc = new UCtx();
+      } else {
+         uc = new UCtx(configu);
+      }
+      tc = createTestCtx();
+   }
+
+   public IInputStreamFactory getInputStreamFactory() {
+      if (inputStreamFac == null) {
+         inputStreamFac = new InputStreamFactoryJUnit(tc, this);
+      }
+      return inputStreamFac;
+   }
+
+   protected IConfigU createConfigU() {
+      return new ConfigUTest();
+   }
+
+   /**
+    * Overriding class may want to create a specialized {@link TestCtx}.
+    * 
+    * This method is called in the constructor!
+    * @return
+    */
+   protected TestCtx createTestCtx() {
+      return new TestCtx(uc);
    }
 
    public void setFlagHideSystemOutTrue() {
@@ -126,10 +166,11 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       assertNotNull(integer);
       assertEquals(i, integer.intValue());
    }
+
    public void assertNotSameReference(Object o1, Object o2) {
       assertEquals(true, o1 != o2);
    }
-   
+
    /**
     * This method does null checks
     * @param data
@@ -150,7 +191,22 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       }
    }
 
+   /**
+    * Called by Suites when setting custom test context for the tests.
+    * <br>
+    * <br>
+    * May provide various different context configurations. etc.
+    * 
+    * Cannot be set once setup method has been called.
+    * @param tc cannot be null
+    */
    public void setTestCtx(TestCtx tc) {
+      if(tc == null) {
+         throw new NullPointerException();
+      }
+      if(isSetup) {
+         throw new IllegalStateException("Cannot set TestCtx once setup has been called");
+      }
       this.tc = tc;
    }
 
@@ -212,6 +268,20 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       }
    }
 
+   public void assertStringLineByLineDebug(String str1, String str2) {
+      StringTokenizer st1 = new StringTokenizer(str1, "\n");
+      StringTokenizer st2 = new StringTokenizer(str2, "\n");
+      while (st1.hasMoreTokens()) {
+         String tok = st1.nextToken();
+         if (st2.hasMoreTokens()) {
+            String tok2 = st2.nextToken();
+            assertEquals(tok, tok2);
+         } else {
+            assertEquals(tok, "");
+         }
+      }
+   }
+
    public void assertStringLineByLineNoLineNumberCheck(String str1, String str2) {
       StringTokenizer st1 = new StringTokenizer(str1, "\n");
       StringTokenizer st2 = new StringTokenizer(str2, "\n");
@@ -239,12 +309,11 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
          switchToShowSysout();
       }
       isPrintNotYetDone = true;
-      
+
       if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
          System.out.println("#MordTestCase#Constructor " + tc.debugFlags());
       }
    }
-
 
    /**
     * Print the accumulated log buffer to the standard output.
@@ -345,6 +414,10 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       }
    }
 
+   public void assertEqualsToStringColor(int color1, int color2) {
+      assertEquals(toStringColor(color1), toStringColor(color2));
+   }
+
    /**
     * Logs the strings along with their id num. 
     * @param num used to differentiate from competing threads log statements
@@ -430,6 +503,7 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
     * Create a default {@link TestCtx} if none was set externally with {@link TestCaseBentley#setTestCtx(TestCtx)}
     */
    public void setUp() {
+      isSetup = true;
       threadFailure = null;
       if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
          System.out.println("#MordTestCase#setUp");
@@ -440,7 +514,24 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       //         lpsOut.resetBuf();
       //         isPrintNotYetDone = true;
       //      }
+      setupLogger();
       setupAbstract();
+   }
+
+   /**
+    * Override for a different configurator
+    * @return
+    */
+   protected ILogConfigurator createLogConfigurator() {
+      return new LogConfiguratorJUnit();
+   }
+
+   protected void setupLogger() {
+      ILogConfigurator logConfigurator = this.createLogConfigurator();
+      //what if several logs? the launcher implementation must deal with it specifically
+      ILogEntryAppender appender = uc.toDLog().getDefault();
+      IDLogConfig config = appender.getConfig();
+      logConfigurator.apply(config);
    }
 
    /**
