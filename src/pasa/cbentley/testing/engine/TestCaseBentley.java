@@ -22,7 +22,6 @@ import pasa.cbentley.core.src4.logging.ILogEntryAppender;
 import pasa.cbentley.core.src4.logging.IStringable;
 import pasa.cbentley.core.src4.logging.ITechConfig;
 import pasa.cbentley.core.src4.logging.ITechLvl;
-import pasa.cbentley.core.src4.utils.ColorUtils;
 import pasa.cbentley.testing.ctx.TestCtx;
 
 /**
@@ -44,15 +43,19 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    /**
     * Provides info about the current state.
     */
-   private TestResult currentTestResult;
+   private TestResult              currentTestResult;
 
-   private boolean    isPrintNotYetDone;
+   private InputStreamFactoryJUnit inputStreamFac;
 
-   private Integer    lock = new Integer(0);
+   private boolean                 isPrintNotYetDone;
 
-   public String toStringColor(int c) {
-      return "(" + ((c >> 24) & 0xFF) + "," + ((c >> 16) & 0xFF) + "," + ((c >> 8) & 0xFF) + "," + (c & 0xFF) + ")";
-   }
+   private boolean                 isSetup;
+
+   private Integer                 lock             = new Integer(0);
+
+   protected final boolean         f                = false;
+
+   protected final boolean         t                = true;
 
    /**
     * 
@@ -76,18 +79,14 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
     */
    private PrintStream             standardOut;
 
-   private AssertionFailedError    threadFailure;
-
-   protected UCtx                  uc;
-
    /**
     * Cannot be final because it is set externally nu {@link TestCaseBentley#setTestCtx(TestCtx)}
     */
    protected TestCtx               tc;
 
-   private InputStreamFactoryJUnit inputStreamFac;
+   private AssertionFailedError    threadFailure;
 
-   private boolean isSetup;
+   protected UCtx                  uc;
 
    /**
     * By default, logs are shown for failures only.
@@ -132,35 +131,6 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       tc = createTestCtx();
    }
 
-   public IInputStreamFactory getInputStreamFactory() {
-      if (inputStreamFac == null) {
-         inputStreamFac = new InputStreamFactoryJUnit(tc, this);
-      }
-      return inputStreamFac;
-   }
-
-   protected IConfigU createConfigU() {
-      return new ConfigUTest();
-   }
-
-   /**
-    * Overriding class may want to create a specialized {@link TestCtx}.
-    * 
-    * This method is called in the constructor!
-    * @return
-    */
-   protected TestCtx createTestCtx() {
-      return new TestCtx(uc);
-   }
-
-   public void setFlagHideSystemOutTrue() {
-      tc.setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, true);
-   }
-
-   public void setFlagHideSystemOutFalse() {
-      tc.setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, false);
-   }
-
    public void assertEquals(boolean b, Boolean val) {
       assertNotNull(val);
       assertEquals(b, val.booleanValue());
@@ -169,10 +139,6 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    public void assertEquals(int i, Integer integer) {
       assertNotNull(integer);
       assertEquals(i, integer.intValue());
-   }
-
-   public void assertNotSameReference(Object o1, Object o2) {
-      assertEquals(true, o1 != o2);
    }
 
    /**
@@ -195,25 +161,6 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       }
    }
 
-   /**
-    * Called by Suites when setting custom test context for the tests.
-    * <br>
-    * <br>
-    * May provide various different context configurations. etc.
-    * 
-    * Cannot be set once setup method has been called.
-    * @param tc cannot be null
-    */
-   public void setTestCtx(TestCtx tc) {
-      if(tc == null) {
-         throw new NullPointerException();
-      }
-      if(isSetup) {
-         throw new IllegalStateException("Cannot set TestCtx once setup has been called");
-      }
-      this.tc = tc;
-   }
-
    public void assertEqualsByteArray(byte[] d, byte[] e) {
       assertEquals(d.length, d.length);
       for (int i = 0; i < e.length; i++) {
@@ -226,6 +173,10 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       for (int i = 0; i < e.length; i++) {
          assertEquals((d[i]), e[i]);
       }
+   }
+
+   public void assertEqualsToStringColor(int color1, int color2) {
+      assertEquals(toStringColor(color1), toStringColor(color2));
    }
 
    public void assertNotNullThread(Object o) {
@@ -254,7 +205,15 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       }
    }
 
+   public void assertNotSameReference(Object o1, Object o2) {
+      assertEquals(true, o1 != o2);
+   }
+
    public void assertReachable() {
+   }
+
+   public void assertReachableNot(String message) {
+      this.assertNotReachable(message);
    }
 
    public void assertStringLineByLine(String str1, String str2) {
@@ -319,6 +278,28 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       }
    }
 
+   protected IConfigU createConfigU() {
+      return new ConfigUTest();
+   }
+
+   /**
+    * Override for a different configurator
+    * @return
+    */
+   protected ILogConfigurator createLogConfigurator() {
+      return new LogConfiguratorJUnit();
+   }
+
+   /**
+    * Overriding class may want to create a specialized {@link TestCtx}.
+    * 
+    * This method is called in the constructor!
+    * @return
+    */
+   protected TestCtx createTestCtx() {
+      return new TestCtx(uc);
+   }
+
    /**
     * Print the accumulated log buffer to the standard output.
     * <br>
@@ -345,6 +326,13 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       for (Runnable run : runs) {
          new Thread(run).start();
       }
+   }
+
+   public IInputStreamFactory getInputStreamFactory() {
+      if (inputStreamFac == null) {
+         inputStreamFac = new InputStreamFactoryJUnit(tc, this);
+      }
+      return inputStreamFac;
    }
 
    public UCtx getUC() {
@@ -391,6 +379,19 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    }
 
    /**
+    * 
+    */
+   public void lockWait() {
+      synchronized (lock) {
+         try {
+            lock.wait();
+         } catch (InterruptedException e) {
+            e.printStackTrace();
+         }
+      }
+   }
+
+   /**
     * Waits for millis until a call to {@link TestCaseBentley#lockRelease(String)}
     * <br>
     * throws any assert failure set to {@link TestCaseBentley#threadFailure}
@@ -416,10 +417,6 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
             throw threadFailure;
          }
       }
-   }
-
-   public void assertEqualsToStringColor(int color1, int color2) {
-      assertEquals(toStringColor(color1), toStringColor(color2));
    }
 
    /**
@@ -489,8 +486,35 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       toDLog().getDefault().getConfig().setFlagFormat(ITechConfig.CONFIG_FLAG_04_SHOW_THREAD, b);
    }
 
+   public void setFlagHideSystemOutFalse() {
+      tc.setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, false);
+   }
+
+   public void setFlagHideSystemOutTrue() {
+      tc.setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, true);
+   }
+
    protected void setNunLockReleased(int num) {
       numLockRelease = num;
+   }
+
+   /**
+    * Called by Suites when setting custom test context for the tests.
+    * <br>
+    * <br>
+    * May provide various different context configurations. etc.
+    * 
+    * Cannot be set once setup method has been called.
+    * @param tc cannot be null
+    */
+   public void setTestCtx(TestCtx tc) {
+      if (tc == null) {
+         throw new NullPointerException();
+      }
+      if (isSetup) {
+         throw new IllegalStateException("Cannot set TestCtx once setup has been called");
+      }
+      this.tc = tc;
    }
 
    public void setTestFlag(int flag, boolean v) {
@@ -523,12 +547,12 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    }
 
    /**
-    * Override for a different configurator
-    * @return
+    * Called at the end of {@link TestCase#setUp}.
+    * <br>
+    * <br>
+    * Replaces the set up method.
     */
-   protected ILogConfigurator createLogConfigurator() {
-      return new LogConfiguratorJUnit();
-   }
+   public abstract void setupAbstract();
 
    protected void setupLogger() {
       ILogConfigurator logConfigurator = this.createLogConfigurator();
@@ -537,14 +561,6 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       IDLogConfig config = appender.getConfig();
       logConfigurator.apply(config);
    }
-
-   /**
-    * Called at the end of {@link TestCase#setUp}.
-    * <br>
-    * <br>
-    * Replaces the set up method.
-    */
-   public abstract void setupAbstract();
 
    public void sleep(long millis) {
       try {
@@ -643,7 +659,17 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    }
 
    public void toString(Dctx dc) {
-      dc.root(this, "BentleyTestCase");
+      dc.root(this, TestCaseBentley.class, "@line654");
+      toStringPrivate(dc);
+
+      dc.nl();
+
+      dc.append("ILogConfigurator used = ");
+      dc.append(createLogConfigurator().getClass().getSimpleName());
+
+      dc.nl();
+      dc.appendVarWithSpace("numLockRelease", numLockRelease);
+      dc.appendVarWithSpace("isPrintNotYetDone", isPrintNotYetDone);
    }
 
    public String toString1Line() {
@@ -651,26 +677,22 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    }
 
    public void toString1Line(Dctx dc) {
-      dc.root1Line(this, "BentleyTestCase");
+      dc.root1Line(this, TestCaseBentley.class);
+      toStringPrivate(dc);
+   }
+
+   public String toStringColor(int c) {
+      return "(" + ((c >> 24) & 0xFF) + "," + ((c >> 16) & 0xFF) + "," + ((c >> 8) & 0xFF) + "," + (c & 0xFF) + ")";
    }
 
    public UCtx toStringGetUCtx() {
       return uc;
    }
 
-   /**
-    * 
-    */
-   public void waitLock() {
-      synchronized (lock) {
-         try {
-            lock.wait();
-         } catch (InterruptedException e) {
-            e.printStackTrace();
-         }
-      }
-   }
+   private void toStringPrivate(Dctx dc) {
+      dc.appendVarWithSpace("isSetup", isSetup);
 
+   }
    //#enddebug
 
 }

@@ -15,28 +15,8 @@ public class ConfigUTest extends ConfigUSettable implements IConfigU {
    //#debug
    private UCtx uc;
 
-   public boolean isEraseSettings() {
-      return false;
-   }
-
-   public boolean isEraseSettingsAll() {
-      return false;
-   }
-
-   public boolean isHardcoded() {
-      return false;
-   }
-
-   public boolean isIgnoreSettings() {
-      return false;
-   }
-
-   public boolean isIgnoreSettingsAll() {
-      return false;
-   }
-
-   public void toStringSetDebugUCtx(UCtx uc) {
-      this.uc = uc;
+   public ConfigUTest() {
+      ToStringSetUsingClassLinks(true);
    }
 
    //#mdebug
@@ -49,7 +29,7 @@ public class ConfigUTest extends ConfigUSettable implements IConfigU {
    }
 
    public void toString(Dctx dc) {
-      dc.root(this, "ConfigUTest");
+      dc.root(this, ConfigUTest.class, "@line52");
       toStringPrivate(dc);
    }
 
@@ -57,12 +37,9 @@ public class ConfigUTest extends ConfigUSettable implements IConfigU {
       return Dctx.toString1Line(this);
    }
 
-   private void toStringPrivate(Dctx dc) {
-
-   }
 
    public void toString1Line(Dctx dc) {
-      dc.root1Line(this, "ConfigUTest");
+      dc.root1Line(this, ConfigUTest.class);
       toStringPrivate(dc);
    }
 
@@ -70,12 +47,12 @@ public class ConfigUTest extends ConfigUSettable implements IConfigU {
       return uc;
    }
 
-   public boolean isForceExceptions() {
-      return false;
+   private void toStringPrivate(Dctx dc) {
+
    }
 
-   public boolean toStringIsUsingClassLinks() {
-      return false;
+   public void toStringSetDebugUCtx(UCtx uc) {
+      this.uc = uc;
    }
 
    //#enddebug

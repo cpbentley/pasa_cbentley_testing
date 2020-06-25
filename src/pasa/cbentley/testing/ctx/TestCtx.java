@@ -7,6 +7,7 @@ package pasa.cbentley.testing.ctx;
 import pasa.cbentley.core.src4.ctx.ACtx;
 import pasa.cbentley.core.src4.ctx.UCtx;
 import pasa.cbentley.core.src4.helpers.StringBBuilder;
+import pasa.cbentley.core.src4.logging.Dctx;
 import pasa.cbentley.core.src4.utils.BitUtils;
 import pasa.cbentley.testing.engine.ITechTesting;
 import pasa.cbentley.testing.engine.TestCaseBentley;
@@ -58,4 +59,25 @@ public class TestCtx extends ACtx implements ITechTesting {
       sb.append(BitUtils.hasFlag(flags, TEST_FLAG_4_DEBUG_METHOD_NAMES) ? " Show Method Names" : "");
       return sb.toString();
    }
+
+   //#mdebug
+   public void toString(Dctx dc) {
+      dc.root(this, TestCtx.class, "@line65");
+      toStringPrivate(dc);
+      super.toString(dc.sup());
+   }
+
+   private void toStringPrivate(Dctx dc) {
+      String str = debugFlags(testFlags);
+      dc.appendWithSpace(str);
+   }
+
+   public void toString1Line(Dctx dc) {
+      dc.root1Line(this, TestCtx.class);
+      toStringPrivate(dc);
+      super.toString1Line(dc.sup1Line());
+   }
+
+   //#enddebug
+
 }
