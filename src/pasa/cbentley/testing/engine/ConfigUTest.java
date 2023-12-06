@@ -12,14 +12,12 @@ import pasa.cbentley.core.src4.logging.IDLog;
 
 public class ConfigUTest extends ConfigUSettable implements IConfigU {
 
-   //#debug
    private UCtx uc;
 
    public ConfigUTest() {
       ToStringSetUsingClassLinks(true);
    }
 
-   //#mdebug
    public IDLog toDLog() {
       return toStringGetUCtx().toDLog();
    }
@@ -55,6 +53,5 @@ public class ConfigUTest extends ConfigUSettable implements IConfigU {
       this.uc = uc;
    }
 
-   //#enddebug
 
 }

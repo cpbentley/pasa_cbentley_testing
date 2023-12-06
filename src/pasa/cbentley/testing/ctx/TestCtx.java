@@ -29,6 +29,17 @@ public class TestCtx extends ACtx implements ITechTesting {
 
    public TestCtx(UCtx uc) {
       super(uc);
+
+      //#debug
+      toDLog().pInit("Created", this, TestCtx.class, "TestCtx", LVL_05_FINE, true);
+   }
+
+   /**
+    * {@link ITechTesting#TEST_FLAG_03_HIDE_OUT_SUCCESSES}
+    * @param flags
+    */
+   public void setTestFlags(int flags) {
+      testFlags = flags;
    }
 
    public int getTestFlags() {
@@ -53,10 +64,12 @@ public class TestCtx extends ACtx implements ITechTesting {
 
    public String debugFlags(int flags) {
       StringBBuilder sb = new StringBBuilder(uc);
-      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_1_HIDE_SYSTEM_OUT) ? " Hide Sysout" : "");
-      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_2_HIDE_IN_DEBUG) ? " Hide In Debug" : "");
-      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_3_PRINT_ANYWAYS) ? " Print Anyways" : "");
-      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_4_DEBUG_METHOD_NAMES) ? " Show Method Names" : "");
+      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_01_PRINT_ANYWAYS) ? "Print_Anyways" : "");
+      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_02_NO_DEBUG_SPECIFICS) ? " No_Debug_Specifics" : "");
+      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_03_HIDE_OUT_SUCCESSES) ? " Hide_Sysout_on_Successes" : "");
+      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_04_HIDE_OUT_FAILURES) ? " Hide_Sysout_on_Failures" : "");
+      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_05_SHOW_OUT_INIT) ? " Show_Constructor_Statements" : "");
+      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_08_DEBUG_METHOD_NAMES) ? " Show_Method_Names" : "");
       return sb.toString();
    }
 

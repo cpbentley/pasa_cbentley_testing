@@ -7,6 +7,9 @@ package pasa.cbentley.testing.engine;
 import java.io.PrintStream;
 import java.util.StringTokenizer;
 
+import org.junit.Rule;
+import org.junit.rules.TestName;
+
 import junit.framework.AssertionFailedError;
 import junit.framework.TestCase;
 import junit.framework.TestResult;
@@ -45,39 +48,44 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
     */
    private TestResult              currentTestResult;
 
+   /**
+    * Sugar for easy false
+    */
+   protected final boolean         f    = false;
+
    private InputStreamFactoryJUnit inputStreamFac;
 
-   private boolean                 isPrintNotYetDone;
+   /**
+    * Flag telling us current sysout is the standard output
+    */
+   private boolean                 isCurrentOutStandard;
 
    private boolean                 isSetup;
 
-   private Integer                 lock             = new Integer(0);
-
-   protected final boolean         f                = false;
-
-   protected final boolean         t                = true;
+   private Integer                 lock = new Integer(0);
 
    /**
     * 
     */
-   protected LoggedPrintStream     lpsOut;
+   protected LoggedPrintStream     lpsOutTest;
 
    /**
     * We have a specific Constructor Stream because we want to be able to switch off
     * constructor logging.
     */
-   protected LoggedPrintStream     lpsOutCons;
+   protected LoggedPrintStream     lpsOutConstructor;
 
    private int                     numLockRelease;
-
-   public boolean                  printAnyways     = false;
-
-   public boolean                  printConstructor = true;
 
    /**
     * Initiliazed with System.out
     */
-   private PrintStream             standardOut;
+   private static PrintStream      standardOut;
+
+   /**
+    * Sugar for easy true
+    */
+   protected final boolean         t    = true;
 
    /**
     * Cannot be final because it is set externally nu {@link TestCaseBentley#setTestCtx(TestCtx)}
@@ -88,12 +96,7 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
 
    protected UCtx                  uc;
 
-   /**
-    * By default, logs are shown for failures only.
-    */
-   public TestCaseBentley() {
-      this(TEST_FLAG_1_HIDE_SYSTEM_OUT);
-   }
+   private boolean                 isDebug;
 
    /**
     * 
@@ -105,10 +108,11 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
     */
    public TestCaseBentley(boolean hide) {
       //when you are running into debugging mode, we want to see system out asap
-      this(hide ? TEST_FLAG_1_HIDE_SYSTEM_OUT : 0);
+      throw new RuntimeException();
    }
 
    /**
+    * JUnit constructors are called twice when running a single test method.
     * Create a default {@link TestCtx} with default hard coded flags.
     * 
     * In a {@link TestSuiteBentley}, you can create you own {@link TestCtx} that will replace the one
@@ -118,16 +122,34 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
     * 
     * @param testFlags
     */
-   public TestCaseBentley(int ptestFlags) {
+   public TestCaseBentley() {
+      //save original System.out
+      //you can only trust System.out on the first run so use a static private field
       if (standardOut == null) {
          standardOut = System.out;
       }
+      //System.out.println("hashCode of System.out = " + standardOut.hashCode() + " ");
+      //this constructor is instantiated twice for a single method test
+      //no way to avoid.. simply hugh loggers 
+      lpsOutConstructor = LoggedPrintStream.create(uc, standardOut);
+      System.setOut(lpsOutConstructor);
+      isCurrentOutStandard = false;
+      //print to the init Printstream.
+      //so in order to completely white out the system out 
+
+      //we switch out asap
+
+      //System.out.println("TestCaseBentley");
       IConfigU configu = createConfigU();
       if (configu == null) {
          uc = new UCtx();
       } else {
          uc = new UCtx(configu);
       }
+
+      //#debug
+      lpsOutConstructor.toStringSetUCtx(uc);
+
       tc = createTestCtx();
    }
 
@@ -261,33 +283,8 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       }
    }
 
-   private void beforeRunTestResult() {
-      boolean isDebug = isRunningDebug();
-      if (isDebug && !hasTestFlag(TEST_FLAG_2_HIDE_IN_DEBUG)) {
-         setFlagHideSystemOutFalse();
-      }
-      if (tc.hasTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT)) {
-         switchToHideSysout();
-      } else {
-         switchToShowSysout();
-      }
-      isPrintNotYetDone = true;
-
-      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
-         System.out.println("#MordTestCase#Constructor " + tc.debugFlags());
-      }
-   }
-
    protected IConfigU createConfigU() {
       return new ConfigUTest();
-   }
-
-   /**
-    * Override for a different configurator
-    * @return
-    */
-   protected ILogConfigurator createLogConfigurator() {
-      return new LogConfiguratorJUnit();
    }
 
    /**
@@ -309,16 +306,36 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
     * <br>
     * 
     */
-   public void doThePrint() {
+   public void printTestStream() {
+      if (hasTestFlag(TEST_FLAG_08_DEBUG_METHOD_NAMES)) {
+         System.out.println("#TestCaseBentley#printTestStream");
+      }
       //only special print action if
-      if (lpsOut != null && isPrintNotYetDone) {
-         System.setOut(standardOut); //give back
-         String str = lpsOut.getBufferString();
-
-         //eventual sysout 
+      if (lpsOutTest != null) {
+         if (!isCurrentOutStandard) {
+            System.setOut(standardOut); //give back
+            isCurrentOutStandard = true;
+         }
+         String str = lpsOutTest.getBufferString();
          standardOut.println(str);
+         lpsOutTest.resetBuf();
+      }
+   }
 
-         isPrintNotYetDone = false;
+   public void printConstructorStream() {
+      if (hasTestFlag(TEST_FLAG_08_DEBUG_METHOD_NAMES)) {
+         System.out.println("#TestCaseBentley#printConstructorStream");
+      }
+      if (lpsOutConstructor != null) {
+
+         if (!isCurrentOutStandard) {
+            //if not already
+            System.setOut(standardOut); //give back
+            isCurrentOutStandard = true;
+         }
+         String str = lpsOutConstructor.getBufferString();
+         standardOut.println(str);
+         lpsOutConstructor.resetBuf();
       }
    }
 
@@ -443,18 +460,44 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    }
 
    /**
-    * TODO find a way to get Junit method name. not easy.
+    * 
     */
    public void run(TestResult tr) {
-      //very first set up
-      beforeRunTestResult();
+      if (hasTestFlag(TEST_FLAG_08_DEBUG_METHOD_NAMES)) {
+         System.out.println("#TestCaseBentley#run name=" + getName() + " isDebug=" + isDebug + " TestResult=" + debugResult(tr));
+      }
+      if (hasTestFlag(TEST_FLAG_02_NO_DEBUG_SPECIFICS)) {
+         isDebug = false;
+      } else {
+         isDebug = isRunningDebug();
+      }
 
-      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
-         System.out.println("#MordTestCase#runTestResult " + debugResult(tr));
+      if (hasTestFlag(TEST_FLAG_01_PRINT_ANYWAYS)) {
+         tc.setTestFlag(TEST_FLAG_03_HIDE_OUT_SUCCESSES, false);
+         tc.setTestFlag(TEST_FLAG_04_HIDE_OUT_FAILURES, false);
+         tc.setTestFlag(TEST_FLAG_05_SHOW_OUT_INIT, true);
       }
-      if (lpsOut != null) {
-         lpsOut.resetBuf();
+
+      //in debug mode, we always want to prevent hiding the sysout out
+      if (isDebug && tc.hasTestFlag(TEST_FLAG_03_HIDE_OUT_SUCCESSES)) {
+         tc.setTestFlag(TEST_FLAG_03_HIDE_OUT_SUCCESSES, false);
       }
+
+      if (hasTestFlag(TEST_FLAG_03_HIDE_OUT_SUCCESSES)) {
+         lpsOutTest = LoggedPrintStream.create(uc, standardOut);
+         System.setOut(lpsOutTest);
+         isCurrentOutStandard = false;
+      } else {
+         System.setOut(standardOut);
+         isCurrentOutStandard = true;
+         if (hasTestFlag(TEST_FLAG_01_PRINT_ANYWAYS) || hasTestFlag(TEST_FLAG_05_SHOW_OUT_INIT)) {
+            printConstructorStream();
+         } else {
+            //erase it from memory
+            lpsOutConstructor = null;
+         }
+      }
+
       if (currentTestResult == null) {
          currentTestResult = tr;
          //currentTr.addListener(new TG());
@@ -467,8 +510,8 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
     * Overriden in case you may want to use tearDownNoError
     */
    public void runBare() throws Throwable {
-      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
-         System.out.println("#MordTestCase#runBare");
+      if (hasTestFlag(TEST_FLAG_08_DEBUG_METHOD_NAMES)) {
+         System.out.println("#TestCaseBentley#runBare");
       }
 
       try {
@@ -483,15 +526,15 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    }
 
    public void setEnableThreadName(boolean b) {
-      toDLog().getDefault().getConfig().setFlagFormat(ITechConfig.CONFIG_FLAG_04_SHOW_THREAD, b);
+      toDLog().getDefault().getConfig().setFlagFormat(ITechConfig.FORMAT_FLAG_04_THREAD, b);
    }
 
    public void setFlagHideSystemOutFalse() {
-      tc.setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, false);
+      tc.setTestFlag(TEST_FLAG_03_HIDE_OUT_SUCCESSES, false);
    }
 
    public void setFlagHideSystemOutTrue() {
-      tc.setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, true);
+      tc.setTestFlag(TEST_FLAG_03_HIDE_OUT_SUCCESSES, true);
    }
 
    protected void setNunLockReleased(int num) {
@@ -518,6 +561,9 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    }
 
    public void setTestFlag(int flag, boolean v) {
+      if (hasTestFlag(TEST_FLAG_08_DEBUG_METHOD_NAMES)) {
+         System.out.println("#TestCaseBentley#setTestFlag. flag=" + flag + " = " + v);
+      }
       tc.setTestFlag(flag, v);
    }
 
@@ -531,18 +577,12 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
     * Create a default {@link TestCtx} if none was set externally with {@link TestCaseBentley#setTestCtx(TestCtx)}
     */
    public void setUp() {
+      if (hasTestFlag(TEST_FLAG_08_DEBUG_METHOD_NAMES)) {
+         System.out.println("#TestCaseBentley#setUp. Calling method setupAbstract()");
+      }
       isSetup = true;
       threadFailure = null;
-      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
-         System.out.println("#MordTestCase#setUp");
-      }
-      //      if (hasTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT)) {
-      //         lpsOut = LoggedPrintStream.create(first);
-      //         setBufferModeMode();
-      //         lpsOut.resetBuf();
-      //         isPrintNotYetDone = true;
-      //      }
-      setupLogger();
+
       setupAbstract();
    }
 
@@ -553,14 +593,6 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
     * Replaces the set up method.
     */
    public abstract void setupAbstract();
-
-   protected void setupLogger() {
-      ILogConfigurator logConfigurator = this.createLogConfigurator();
-      //what if several logs? the launcher implementation must deal with it specifically
-      ILogEntryAppender appender = uc.toDLog().getDefault();
-      IDLogConfig config = appender.getConfig();
-      logConfigurator.apply(config);
-   }
 
    public void sleep(long millis) {
       try {
@@ -573,62 +605,35 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    /**
     * 
     */
-   private void switchToHideSysout() {
-      setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, true);
-      lpsOut = LoggedPrintStream.create(uc, standardOut);
-      System.setOut(lpsOut);
-      isPrintNotYetDone = true;
-   }
-
-   private void switchToShowSysout() {
-      //if already hidden
-      setTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT, false);
-      System.setOut(standardOut);
-   }
-
-   /**
-    * Called by the user in its test method or setup to force
-    */
-   protected void switchToShowSysoutUser(boolean v) {
-      if (v) {
-         if (hasTestFlag(TEST_FLAG_1_HIDE_SYSTEM_OUT)) {
-            //print the stored data
-            doThePrint();
-         }
-         //show
-         switchToShowSysout();
-      } else {
-         switchToHideSysout();
-      }
-   }
-
-   /**
-    * 
-    */
    public void tearDown() {
-      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
-         System.out.println("#MordTestCase#tearDown");
+      if (hasTestFlag(TEST_FLAG_08_DEBUG_METHOD_NAMES)) {
+         System.out.println("#TestCaseBentley#tearDown");
       }
+
       if (currentTestResult != null) {
-         //System.out.println();
+         //#debug
+         toDLog().pTest("", new TestResultStringable(uc, currentTestResult), TestCaseBentley.class, "tearDown", LVL_05_FINE, false);
       }
-      //System.setOut(first);
 
    }
 
    private void tearDownError() {
-      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
-         System.out.println("#MordTestCase#tearDownError");
+      if (hasTestFlag(TEST_FLAG_08_DEBUG_METHOD_NAMES)) {
+         System.out.println("#TestCaseBentley#tearDownError");
       }
-      doThePrint();
+      //avoid double prints
+      if (!tc.hasTestFlag(TEST_FLAG_04_HIDE_OUT_FAILURES)) {
+         printConstructorStream();
+         printTestStream();
+      }
    }
 
    /**
     * Not Used anymore
     */
    private void tearDownNoError() {
-      if (hasTestFlag(TEST_FLAG_4_DEBUG_METHOD_NAMES)) {
-         System.out.println("#MordTestCase#tearDownNoError");
+      if (hasTestFlag(TEST_FLAG_08_DEBUG_METHOD_NAMES)) {
+         System.out.println("#TestCaseBentley#tearDownNoError");
       }
    }
 
@@ -661,15 +666,49 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    public void toString(Dctx dc) {
       dc.root(this, TestCaseBentley.class, "@line654");
       toStringPrivate(dc);
-
+      dc.nlLvl(tc);
       dc.nl();
-
-      dc.append("ILogConfigurator used = ");
-      dc.append(createLogConfigurator().getClass().getSimpleName());
-
-      dc.nl();
+      dc.appendVarWithSpace("isCurrentOutStandard", isCurrentOutStandard);
+      dc.appendVarWithSpace("isDebug", isDebug);
+      dc.appendVarWithSpace("isSetup", isSetup);
       dc.appendVarWithSpace("numLockRelease", numLockRelease);
-      dc.appendVarWithSpace("isPrintNotYetDone", isPrintNotYetDone);
+
+      dc.nl();
+      if (standardOut == null) {
+         dc.append("standardOut is null");
+      } else {
+         dc.append("standardOut hashcode is " + standardOut.hashCode());
+         dc.nl();
+         dc.append("standardOut toString START ");
+         dc.nl();
+         dc.append(standardOut.toString());
+         dc.nl();
+         dc.append("standardOut toString END ");
+      }
+      dc.nl();
+      if (lpsOutTest == null) {
+         dc.append("lpsOutTest is null");
+      } else {
+         dc.append("lpsOutTest hashcode is " + lpsOutTest.hashCode());
+         dc.nl();
+         dc.append("lpsOutTest BufferString START ");
+         dc.nl();
+         dc.append(lpsOutTest.getBufferString());
+         dc.nl();
+         dc.append("lpsOutTest BufferString END ");
+      }
+      dc.nl();
+      if (lpsOutConstructor == null) {
+         dc.append("lpsOutConstructor is null");
+      } else {
+         dc.append("lpsOutConstructor hashcode is " + lpsOutConstructor.hashCode());
+         dc.nl();
+         dc.append("lpsOutConstructor BufferString START ");
+         dc.nl();
+         dc.append(lpsOutConstructor.getBufferString());
+         dc.nl();
+         dc.append("lpsOutConstructor BufferString END ");
+      }
    }
 
    public String toString1Line() {

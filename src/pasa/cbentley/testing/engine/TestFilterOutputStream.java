@@ -23,14 +23,16 @@ import pasa.cbentley.core.src4.helpers.StringBBuilder;
  */
 public class TestFilterOutputStream extends FilterOutputStream {
 
-   private StringBBuilder buf;
-
-   boolean                sendToBuffer = true;
-
    /**
     * Write output data to a stream 
     */
    ByteArrayOutputStream  baos;
+
+   private StringBBuilder buf;
+
+   private int count = 0;
+
+   boolean                sendToBuffer = true;
 
    boolean                sendToStdOut = false;
 
@@ -46,41 +48,6 @@ public class TestFilterOutputStream extends FilterOutputStream {
       this.uc = uc;
       this.buf = new StringBBuilder(uc, 3600);
       baos = new ByteArrayOutputStream();
-   }
-
-   public void write(int b) throws IOException {
-      if (sendToBuffer) {
-         char cb = (char) b;
-         buf.append(cb);
-         baos.write(b);
-      }
-      if (sendToStdOut) {
-         super.write(b);
-      }
-   }
-
-   public void resetBuf() {
-      buf.reset();
-   }
-
-   private int count = 0;
-
-   /**
-    *Prints the content
-    */
-   public void printAll(PrintStream out) {
-      String str = buf.toString();
-      count += str.length();
-      out.print(str);
-   }
-
-   public int getCount() {
-      return count;
-   }
-
-   public void setFlags(boolean std, boolean buff) {
-      sendToStdOut = std;
-      sendToBuffer = buff;
    }
 
    public String getBufferString() {
@@ -99,5 +66,38 @@ public class TestFilterOutputStream extends FilterOutputStream {
          e.printStackTrace();
       }
       return sb.toString();
+   }
+
+   public int getCount() {
+      return count;
+   }
+
+   /**
+    *Prints the content
+    */
+   public void printAll(PrintStream out) {
+      String str = buf.toString();
+      count += str.length();
+      out.print(str);
+   }
+
+   public void resetBuf() {
+      buf.reset();
+   }
+
+   public void setFlags(boolean std, boolean buff) {
+      sendToStdOut = std;
+      sendToBuffer = buff;
+   }
+
+   public void write(int b) throws IOException {
+      if (sendToBuffer) {
+         char cb = (char) b;
+         buf.append(cb);
+         baos.write(b);
+      }
+      if (sendToStdOut) {
+         super.write(b);
+      }
    }
 }
