@@ -487,6 +487,9 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
          lpsOutTest = LoggedPrintStream.create(uc, standardOut);
          System.setOut(lpsOutTest);
          isCurrentOutStandard = false;
+         if(!hasTestFlag(TEST_FLAG_05_SHOW_OUT_INIT)) {
+            lpsOutConstructor = null;
+         }
       } else {
          System.setOut(standardOut);
          isCurrentOutStandard = true;
@@ -610,7 +613,7 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
          System.out.println("#TestCaseBentley#tearDown");
       }
 
-      if (currentTestResult != null) {
+      if (currentTestResult != null && hasTestFlag(TEST_FLAG_06_TEAR_DOWN_RESULT)) {
          //#debug
          toDLog().pTest("", new TestResultStringable(uc, currentTestResult), TestCaseBentley.class, "tearDown", LVL_05_FINE, false);
       }
@@ -623,7 +626,9 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       }
       //avoid double prints
       if (!tc.hasTestFlag(TEST_FLAG_04_HIDE_OUT_FAILURES)) {
-         printConstructorStream();
+         if(tc.hasTestFlag(TEST_FLAG_05_SHOW_OUT_INIT)) {
+            printConstructorStream();
+         }
          printTestStream();
       }
    }

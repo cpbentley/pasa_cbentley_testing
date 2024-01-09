@@ -69,6 +69,7 @@ public class TestCtx extends ACtx implements ITechTesting {
       sb.append(BitUtils.hasFlag(flags, TEST_FLAG_03_HIDE_OUT_SUCCESSES) ? " Hide_Sysout_on_Successes" : "");
       sb.append(BitUtils.hasFlag(flags, TEST_FLAG_04_HIDE_OUT_FAILURES) ? " Hide_Sysout_on_Failures" : "");
       sb.append(BitUtils.hasFlag(flags, TEST_FLAG_05_SHOW_OUT_INIT) ? " Show_Constructor_Statements" : "");
+      sb.append(BitUtils.hasFlag(flags, TEST_FLAG_06_TEAR_DOWN_RESULT) ? " Show_TearDown_Result" : "");
       sb.append(BitUtils.hasFlag(flags, TEST_FLAG_08_DEBUG_METHOD_NAMES) ? " Show_Method_Names" : "");
       return sb.toString();
    }

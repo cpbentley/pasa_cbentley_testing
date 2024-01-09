@@ -4,6 +4,7 @@
  */
 package pasa.cbentley.testing.engine;
 
+import junit.framework.TestResult;
 import pasa.cbentley.core.src4.ctx.UCtx;
 import pasa.cbentley.core.src4.interfaces.ITech;
 
@@ -64,12 +65,14 @@ public interface ITechTesting extends ITech {
    public static final int TEST_FLAG_04_HIDE_OUT_FAILURES  = 1 << 3;
 
    /**
-    * When this flag is set, you want the collected stream from constructor
-    * to runBar to be printed.
+    * When this flag is set, you want the collected stream from constructor to runBar to be printed.
     * But this action still depends on the {@link ITechTesting#TEST_FLAG_03_HIDE_OUT_SUCCESSES}
     * 
     * So if {@link ITechTesting#TEST_FLAG_03_HIDE_OUT_SUCCESSES} is set, it won't print
     * 
+    * <p>
+    * On a failure
+    * </p>
     * <p>
     * By default, we don't want to show most often useless init text of {@link UCtx}
     * </p>
@@ -77,9 +80,11 @@ public interface ITechTesting extends ITech {
    public static final int TEST_FLAG_05_SHOW_OUT_INIT      = 1 << 4;
 
    /**
-    * 
+    * <p>
+    * By default, we don't want to see printed the JUnit {@link TestResult} values. We see them already
+    * </p>
     */
-   public static final int TEST_FLAG_06_                   = 1 << 5;
+   public static final int TEST_FLAG_06_TEAR_DOWN_RESULT   = 1 << 5;
 
    /**
     * 
