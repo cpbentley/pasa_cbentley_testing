@@ -25,37 +25,15 @@ import pasa.cbentley.testing.engine.TestCaseBentley;
  */
 public class TestCtx extends ACtx implements ITechTesting {
 
-   private int testFlags;
+   protected TestCaseBentley testCaseBentley;
+
+   private int               testFlags;
 
    public TestCtx(UCtx uc) {
       super(uc);
 
       //#debug
       toDLog().pInit("Created", this, TestCtx.class, "TestCtx", LVL_05_FINE, true);
-   }
-
-   /**
-    * {@link ITechTesting#TEST_FLAG_03_HIDE_OUT_SUCCESSES}
-    * @param flags
-    */
-   public void setTestFlags(int flags) {
-      testFlags = flags;
-   }
-
-   public int getTestFlags() {
-      return this.testFlags;
-   }
-
-   public void setTestFlag(int flag, boolean v) {
-      testFlags = BitUtils.setFlag(testFlags, flag, v);
-   }
-
-   public boolean hasTestFlag(int flag) {
-      return BitUtils.hasFlag(testFlags, flag);
-   }
-
-   public int getCtxID() {
-      return 21;
    }
 
    public String debugFlags() {
@@ -74,22 +52,44 @@ public class TestCtx extends ACtx implements ITechTesting {
       return sb.toString();
    }
 
+   public int getCtxID() {
+      return 21;
+   }
+
+   public int getTestFlags() {
+      return this.testFlags;
+   }
+
+   public boolean hasTestFlag(int flag) {
+      return BitUtils.hasFlag(testFlags, flag);
+   }
+
+   public void setTestCase(TestCaseBentley testCaseBentley) {
+      this.testCaseBentley = testCaseBentley;
+   }
+
+   public void setTestFlag(int flag, boolean v) {
+      testFlags = BitUtils.setFlag(testFlags, flag, v);
+   }
+
    //#mdebug
    public void toString(Dctx dc) {
       dc.root(this, TestCtx.class, "@line65");
       toStringPrivate(dc);
       super.toString(dc.sup());
-   }
 
-   private void toStringPrivate(Dctx dc) {
-      String str = debugFlags(testFlags);
-      dc.appendWithSpace(str);
+      dc.nlLvl(testCaseBentley, "testCaseBentley");
    }
 
    public void toString1Line(Dctx dc) {
       dc.root1Line(this, TestCtx.class);
       toStringPrivate(dc);
       super.toString1Line(dc.sup1Line());
+   }
+
+   private void toStringPrivate(Dctx dc) {
+      String str = debugFlags(testFlags);
+      dc.appendWithSpace(str);
    }
 
    //#enddebug

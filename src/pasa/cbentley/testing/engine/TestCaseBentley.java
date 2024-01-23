@@ -99,19 +99,6 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    private boolean                 isDebug;
 
    /**
-    * 
-    * @param hide when true, the Junit test system.out calls are not showned when test is successful.
-    * The method sets the {@link System#setOut(PrintStream)}.
-    * That special log will keep the prints until the end of the method. if there is an error, it will print 
-    * it on System.out.
-    * 
-    */
-   public TestCaseBentley(boolean hide) {
-      //when you are running into debugging mode, we want to see system out asap
-      throw new RuntimeException();
-   }
-
-   /**
     * JUnit constructors are called twice when running a single test method.
     * Create a default {@link TestCtx} with default hard coded flags.
     * 
@@ -151,6 +138,7 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       lpsOutConstructor.toStringSetUCtx(uc);
 
       tc = createTestCtx();
+
    }
 
    public void assertEquals(boolean b, Boolean val) {
@@ -460,9 +448,10 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    }
 
    /**
-    * 
+    * Called First
     */
    public void run(TestResult tr) {
+      //System.out.println("#TestCaseBentley#run  ");
       if (hasTestFlag(TEST_FLAG_08_DEBUG_METHOD_NAMES)) {
          System.out.println("#TestCaseBentley#run name=" + getName() + " isDebug=" + isDebug + " TestResult=" + debugResult(tr));
       }
@@ -487,7 +476,7 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
          lpsOutTest = LoggedPrintStream.create(uc, standardOut);
          System.setOut(lpsOutTest);
          isCurrentOutStandard = false;
-         if(!hasTestFlag(TEST_FLAG_05_SHOW_OUT_INIT)) {
+         if (!hasTestFlag(TEST_FLAG_05_SHOW_OUT_INIT)) {
             lpsOutConstructor = null;
          }
       } else {
@@ -586,6 +575,7 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       isSetup = true;
       threadFailure = null;
 
+      tc.setTestCase(this);
       setupAbstract();
    }
 
@@ -626,7 +616,7 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       }
       //avoid double prints
       if (!tc.hasTestFlag(TEST_FLAG_04_HIDE_OUT_FAILURES)) {
-         if(tc.hasTestFlag(TEST_FLAG_05_SHOW_OUT_INIT)) {
+         if (tc.hasTestFlag(TEST_FLAG_05_SHOW_OUT_INIT)) {
             printConstructorStream();
          }
          printTestStream();
@@ -669,9 +659,8 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    }
 
    public void toString(Dctx dc) {
-      dc.root(this, TestCaseBentley.class, "@line654");
+      dc.root(this, TestCaseBentley.class, 672);
       toStringPrivate(dc);
-      dc.nlLvl(tc);
       dc.nl();
       dc.appendVarWithSpace("isCurrentOutStandard", isCurrentOutStandard);
       dc.appendVarWithSpace("isDebug", isDebug);
