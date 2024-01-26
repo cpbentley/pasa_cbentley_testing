@@ -10,6 +10,13 @@ import pasa.cbentley.core.src4.ctx.UCtx;
 import pasa.cbentley.core.src4.logging.Dctx;
 import pasa.cbentley.core.src4.logging.IDLog;
 
+/**
+ * {@link IConfigU} do not have {@link UCtx} in the constructor parameter. It is set later 
+ * by {@link UCtx} using {@link IConfigU#toStringSetDebugUCtx(UCtx)}
+ * 
+ * @author Charles Bentley
+ *
+ */
 public class ConfigUTest extends ConfigUSettable implements IConfigU {
 
    private UCtx uc;
@@ -35,7 +42,6 @@ public class ConfigUTest extends ConfigUSettable implements IConfigU {
       return Dctx.toString1Line(this);
    }
 
-
    public void toString1Line(Dctx dc) {
       dc.root1Line(this, ConfigUTest.class);
       toStringPrivate(dc);
@@ -52,6 +58,5 @@ public class ConfigUTest extends ConfigUSettable implements IConfigU {
    public void toStringSetDebugUCtx(UCtx uc) {
       this.uc = uc;
    }
-
 
 }

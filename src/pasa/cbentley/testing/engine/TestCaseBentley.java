@@ -43,6 +43,8 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       return tr.wasSuccessful() + " Errors=" + tr.errorCount() + " Failures=" + tr.failureCount() + " Run=" + tr.runCount();
    }
 
+   private static int              count = 0;
+
    /**
     * Provides info about the current state.
     */
@@ -51,7 +53,7 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    /**
     * Sugar for easy false
     */
-   protected final boolean         f    = false;
+   protected final boolean         f     = false;
 
    private InputStreamFactoryJUnit inputStreamFac;
 
@@ -62,7 +64,7 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
 
    private boolean                 isSetup;
 
-   private Integer                 lock = new Integer(0);
+   private Integer                 lock  = new Integer(0);
 
    /**
     * 
@@ -85,7 +87,7 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    /**
     * Sugar for easy true
     */
-   protected final boolean         t    = true;
+   protected final boolean         t     = true;
 
    /**
     * Cannot be final because it is set externally nu {@link TestCaseBentley#setTestCtx(TestCtx)}
@@ -126,12 +128,14 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
 
       //we switch out asap
 
+      count++;
+      
       //System.out.println("TestCaseBentley");
       IConfigU configu = createConfigU();
       if (configu == null) {
          uc = new UCtx();
       } else {
-         uc = new UCtx(configu);
+         uc = new UCtx(configu,"Test"+count);
       }
 
       //#debug
@@ -272,7 +276,15 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
    }
 
    protected IConfigU createConfigU() {
-      return new ConfigUTest();
+      ConfigUTest config = new ConfigUTest();
+      ILogConfigurator configurator = createLogConfigurator();
+      config.toStringSetLogConfigurator(configurator);
+      return config;
+   }
+
+   protected ILogConfigurator createLogConfigurator() {
+      LogConfiguratorTestBentleyDef configurator = new LogConfiguratorTestBentleyDef();
+      return configurator;
    }
 
    /**
