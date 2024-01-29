@@ -14,7 +14,7 @@ public class LogConfiguratorTestBentleyDef implements ILogConfigurator, ITechLvl
 
       log.setFlagTag(FLAG_17_PRINT_TEST, true);
       log.setFlagTag(FLAG_08_PRINT_EXCEPTION, true);
-      log.setFlagTag(FLAG_25_PRINT_NULL, true);
+      log.setFlagTag(FLAG_02_PRINT_NULL, true);
 
       log.setFlagTag(FLAG_05_PRINT_UI, false);
       log.setFlagTag(FLAG_06_PRINT_WORK, false);

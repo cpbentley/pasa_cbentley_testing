@@ -129,19 +129,27 @@ public abstract class TestCaseBentley extends TestCase implements IStringable, I
       //we switch out asap
 
       count++;
-      
+
       //System.out.println("TestCaseBentley");
       IConfigU configu = createConfigU();
       if (configu == null) {
          uc = new UCtx();
       } else {
-         uc = new UCtx(configu,"Test"+count);
+         uc = new UCtx(configu, "TestCase_" + count);
       }
 
       //#debug
       lpsOutConstructor.toStringSetUCtx(uc);
 
+      initCtxBeforeTestFramworkCtxCreation();
       tc = createTestCtx();
+
+   }
+
+   /**
+    * Called before {@link TestCaseBentley#createTestCtx()} in the constructor but with UC created
+    */
+   protected void initCtxBeforeTestFramworkCtxCreation() {
 
    }
 
