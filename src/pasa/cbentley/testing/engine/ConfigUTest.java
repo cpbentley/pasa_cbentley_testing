@@ -19,44 +19,30 @@ import pasa.cbentley.core.src4.logging.IDLog;
  */
 public class ConfigUTest extends ConfigUSettable implements IConfigU {
 
-   private UCtx uc;
 
    public ConfigUTest() {
       ToStringSetUsingClassLinks(true);
    }
 
-   public IDLog toDLog() {
-      return toStringGetUCtx().toDLog();
-   }
 
-   public String toString() {
-      return Dctx.toString(this);
-   }
-
+   //#mdebug
    public void toString(Dctx dc) {
-      dc.root(this, ConfigUTest.class, "@line52");
+      dc.root(this, ConfigUTest.class, 30);
       toStringPrivate(dc);
-   }
-
-   public String toString1Line() {
-      return Dctx.toString1Line(this);
+      super.toString(dc.sup());
    }
 
    public void toString1Line(Dctx dc) {
       dc.root1Line(this, ConfigUTest.class);
       toStringPrivate(dc);
-   }
-
-   public UCtx toStringGetUCtx() {
-      return uc;
+      super.toString1Line(dc.sup1Line());
    }
 
    private void toStringPrivate(Dctx dc) {
-
+      
    }
+   //#enddebug
+   
 
-   public void toStringSetDebugUCtx(UCtx uc) {
-      this.uc = uc;
-   }
 
 }
